@@ -136,9 +136,14 @@ EOF
 run_background_loop() {
   echo "🚀 Starting TUIC server..."
   while true; do
-    "$TUIC_BIN" -c "$SERVER_TOML" >/dev/null 2>&1 || true
-    echo "⚠️ TUIC crashed. Restarting in 5s..."
-    sleep 5
+    mkdir -p /sys/fs/cgroup/tuic
+    # 限制 CPU 为 0.5 核
+    echo "50000 100000" > /sys/fs/cgroup/tuic/cpu.max
+    "$TUIC_BIN" -c "$SERVER_TOML" >/dev/null 2>&1 &
+    PID=$!
+    echo $PID > /sys/fs/cgroup/tuic/cgroup.procs
+    wait $PID
+    echo "⚠ TUIC crashed. Restarting in 5s..."
   done
 }
 
@@ -162,3 +167,4 @@ main() {
 }
 
 main "$@"
+
